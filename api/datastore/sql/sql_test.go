@@ -8,7 +8,9 @@ import (
 	"context"
 	"github.com/fnproject/fn/api/datastore/internal/datastoretest"
 	"github.com/fnproject/fn/api/datastore/internal/datastoreutil"
+	"github.com/fnproject/fn/api/datastore/sql/migrations"
 	"github.com/fnproject/fn/api/models"
+	"github.com/rdallman/migrate"
 )
 
 // since New with fresh dbs skips all migrations:
@@ -27,15 +29,27 @@ func newWithMigrations(ctx context.Context, url *url.URL) (*sqlStore, error) {
 		return nil, err
 	}
 
-	err = m.Down()
-	if err != nil {
+	curVer, _, err := m.Version()
+	// migrate.ErrNilVersion means that no migrations found, which is ok
+	if err != nil && err != migrate.ErrNilVersion {
 		return nil, err
 	}
 
-	// go through New, to ensure our Up logic works in there...
-	ds, err = newDS(ctx, url)
-	if err != nil {
-		return nil, err
+	// we only have to run migrations in case if there is new version
+	// note: potential issue in migrate lib, if no migrations file were found -
+	// m.Up() should not fail with weird error: file not found
+	latestVer := latestVersion(migrations.AssetNames())
+
+	if uint(latestVer) > curVer {
+		err = m.Down()
+		if err != nil {
+			return nil, err
+		}
+		// go through New, to ensure our Up logic works in there...
+		ds, err = newDS(ctx, url)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return ds, nil

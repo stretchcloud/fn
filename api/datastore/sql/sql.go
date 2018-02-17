@@ -224,17 +224,22 @@ func runMigrations(ctx context.Context, url string, exists bool) error {
 		common.Logger(ctx).Fatal("Found previously applied migrations, the datastore must be wiped out!")
 	}
 
-	if !exists {
-		// set to highest and bail
-		return m.Force(latestVersion(migrations.AssetNames()))
-	}
+	latestVer := latestVersion(migrations.AssetNames())
+	if uint(latestVer) > curVer {
+		if !exists {
+			// set to highest and bail
+			return m.Force(latestVer)
+		}
 
-	// run any migrations needed to get to latest, if any
-	err = m.Up()
-	if err == migrate.ErrNoChange { // we don't care, but want other errors
-		err = nil
+		// run any migrations needed to get to latest, if any
+
+		err = m.Up()
+		if err == migrate.ErrNoChange { // we don't care, but want other errors
+			err = nil
+		}
+		return err
 	}
-	return err
+	return nil
 }
 
 func migrator(url string) (*migrate.Migrate, error) {
@@ -910,7 +915,6 @@ func buildFilterAppQuery(filter *models.AppFilter) (string, []interface{}, error
 	fmt.Fprintf(&b, ` LIMIT ?`)
 	args = append(args, filter.PerPage)
 	if len(filter.NameIn) > 0 {
-		// fmt.Println("about to sqlx.in:", b.String(), args)
 		return sqlx.In(b.String(), args...)
 	}
 	return b.String(), args, nil

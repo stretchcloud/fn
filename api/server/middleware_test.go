@@ -122,8 +122,7 @@ func TestRootMiddleware(t *testing.T) {
 	}{
 		{"/r/myapp", ``, "GET", map[string][]string{}, http.StatusOK, "middle"},
 		{"/r/myapp/myroute", ``, "GET", map[string][]string{}, http.StatusOK, "middle"},
-		// TODO: fix this
-		//{"/v1/apps", ``, "GET", map[string][]string{"funcit": {"Test"}}, http.StatusOK, "johnny"},
+		{"/v1/apps", ``, "GET", map[string][]string{"funcit": {"Test"}}, http.StatusOK, "johnny"},
 	} {
 		body := strings.NewReader(test.body)
 		req, err := http.NewRequest(test.method, "http://127.0.0.1:8080"+test.path, body)
