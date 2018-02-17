@@ -150,7 +150,7 @@ func newDS(ctx context.Context, url *url.URL) (*sqlStore, error) {
 	db.SetMaxIdleConns(maxIdleConns)
 	log.WithFields(logrus.Fields{"max_idle_connections": maxIdleConns, "datastore": driver}).Info("datastore dialed")
 
-	err = runMigrations(url.String(), checkExistence(db)) // original url string
+	err = runMigrations(ctx, url.String(), checkExistence(db)) // original url string
 	if err != nil {
 		log.WithError(err).Error("error running migrations")
 		return nil, err
@@ -204,12 +204,25 @@ func checkExistence(db *sqlx.DB) bool {
 // check if the db already existed, if the db is brand new then we can skip
 // over all the migrations BUT we must be sure to set the right migration
 // number so that only current migrations are skipped, not any future ones.
-func runMigrations(url string, exists bool) error {
+func runMigrations(ctx context.Context, url string, exists bool) error {
 	m, err := migrator(url)
 	if err != nil {
 		return err
 	}
 	defer m.Close()
+
+	// Note: this code should live here until any new migration
+	// this code will help people to recreate their datastores.
+	curVer, _, err := m.Version()
+	// migrate.ErrNilVersion means that no migrations found, which is ok
+	if err != nil && err != migrate.ErrNilVersion {
+		return err
+	}
+	// if current datastore version is greater than nil version
+	// (-1, but we're ok with version zero actually), Fn is doomed
+	if curVer > 0 {
+		common.Logger(ctx).Fatal("Found previously applied migrations, the datastore must be wiped out!")
+	}
 
 	if !exists {
 		// set to highest and bail
