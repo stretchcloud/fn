@@ -4,21 +4,19 @@ import (
 	"net/http"
 
 	"github.com/fnproject/fn/api"
-	"github.com/fnproject/fn/api/models"
 	"github.com/gin-gonic/gin"
 )
 
 func (s *Server) handleAppGetByName(c *gin.Context) {
 	ctx := c.Request.Context()
 
-	app := &models.App{Name: c.MustGet(api.App).(string)}
-	err := s.FireBeforeAppGet(ctx, app)
+	err := s.FireBeforeAppGet(ctx, c.MustGet(api.AppID).(string))
 	if err != nil {
 		handleErrorResponse(c, err)
 		return
 	}
 
-	app, err = s.datastore.GetAppByID(ctx, c.MustGet(api.AppID).(string))
+	app, err := s.datastore.GetAppByID(ctx, c.MustGet(api.AppID).(string))
 	if err != nil {
 		handleErrorResponse(c, err)
 		return
