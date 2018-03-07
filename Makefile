@@ -50,7 +50,7 @@ test-api: test-basic
 	./api_test.sh mysql 4 0
 	./api_test.sh postgres 4 0
 
-test-system: test-basic
+test-system: test-basic test-api
 	./system_test.sh sqlite3 4
 	./system_test.sh mysql 4 0
 	./system_test.sh postgres 4 0
